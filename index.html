@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mạng xã hội của ĐĂNG KHÔI - Cyberpunk Edition</title>
+
+    <!-- FontAwesome & Google Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background: #050811;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+            position: relative;
+            perspective: 1000px;
+        }
+
+        /* Canvas cho hiệu ứng hạt đom đém đa sắc rơi lung linh */
+        #particles-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Quầng sáng đa màu phía sau */
+        .bg-glow-1 {
+            position: fixed;
+            top: 15%;
+            left: 20%;
+            width: 350px;
+            height: 350px;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.3), rgba(129, 140, 248, 0.1), transparent 70%);
+            border-radius: 50%;
+            filter: blur(80px);
+            animation: pulseGlow1 10s ease-in-out infinite alternate;
+            z-index: 0;
+        }
+
+        .bg-glow-2 {
+            position: fixed;
+            bottom: 15%;
+            right: 20%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(192, 132, 252, 0.25), rgba(244, 63, 94, 0.15), transparent 70%);
+            border-radius: 50%;
+            filter: blur(90px);
+            animation: pulseGlow2 8s ease-in-out infinite alternate;
+            z-index: 0;
+        }
+
+        @keyframes pulseGlow1 {
+            0% { transform: scale(1) translate(-30px, -30px); opacity: 0.6; }
+            100% { transform: scale(1.4) translate(30px, 30px); opacity: 0.9; }
+        }
+
+        @keyframes pulseGlow2 {
+            0% { transform: scale(1.2) translate(30px, -20px); opacity: 0.5; }
+            100% { transform: scale(0.9) translate(-30px, 20px); opacity: 0.8; }
+        }
+
+        /* Card container với hiệu ứng Glassmorphism & 3D Tilt */
+        .card {
+            background: rgba(13, 20, 38, 0.65);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 28px;
+            padding: 35px 25px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.8),
+                        0 0 30px rgba(56, 189, 248, 0.2);
+            position: relative;
+            z-index: 1;
+            transition: transform 0.1s ease-out, box-shadow 0.4s ease;
+            transform-style: preserve-3d;
+        }
+
+        /* Viền Neon phát sáng quanh Card */
+        .card::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 30px;
+            background: linear-gradient(45deg, #38bdf8, #818cf8, #c084fc, #e11d48, #38bdf8);
+            background-size: 400%;
+            z-index: -1;
+            opacity: 0.3;
+            filter: blur(10px);
+            animation: borderGlow 12s linear infinite;
+        }
+
+        @keyframes borderGlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Khu vực Đĩa Nhạc Xoay & Cần Nhạc */
+        .disc-container {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            margin: 0 auto 22px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Cần đọc đĩa than (Tonearm) */
+        .tonearm {
+            position: absolute;
+            top: -10px;
+            right: 0px;
+            width: 45px;
+            height: 60px;
+            z-index: 4;
+            transform-origin: top right;
+            transform: rotate(-30deg);
+            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+        }
+
+        .tonearm-head {
+            position: absolute;
+            top: 0; right: 0;
+            width: 14px; height: 14px;
+            background: #cbd5e1;
+            border-radius: 50%;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+
+        .tonearm-arm {
+            position: absolute;
+            top: 6px; right: 6px;
+            width: 4px; height: 50px;
+            background: linear-gradient(to bottom, #cbd5e1, #64748b);
+            border-radius: 2px;
+        }
+
+        .tonearm.playing {
+            transform: rotate(0deg);
+        }
+
+        /* Đĩa Vinyl Nhạc phía sau Avatar */
+        .vinyl-disc {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle, #222 20%, #111 21%, #111 35%, #000 36%, #1a1a1a 40%, #0d0d0d 65%, #000 100%);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 20px rgba(0,0,0,0.9);
+            animation: spinDisc 5s linear infinite;
+            animation-play-state: paused;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: box-shadow 0.5s ease;
+        }
+
+        .vinyl-disc::before {
+            content: '';
+            position: absolute;
+            width: 88%; height: 88%;
+            border-radius: 50%;
+            border: 1px dashed rgba(255, 255, 255, 0.18);
+        }
+
+        .vinyl-disc.playing {
+            animation-play-state: running;
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.7), 0 0 60px rgba(192, 132, 252, 0.5);
+        }
+
+        @keyframes spinDisc {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Logo Avatar chính giữa đĩa */
+        .logo {
+            position: relative;
+            width: 78px;
+            height: 78px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #38bdf8;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.6);
+            z-index: 2;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .logo:hover {
+            transform: scale(1.12) rotate(5deg);
+        }
+
+        /* Tiêu đề & Lời chào với hiệu ứng chuyển màu sống động */
+        .welcome-title {
+            font-size: 24px;
+            font-weight: 800;
+            background: linear-gradient(90deg, #38bdf8, #818cf8, #c084fc, #e11d48, #38bdf8);
+            background-size: 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+            letter-spacing: -0.5px;
+            animation: gradientText 6s linear infinite;
+        }
+
+        @keyframes gradientText {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 300% 50%; }
+        }
+
+        p.bio {
+            font-size: 13.5px;
+            color: #94a3b8;
+            margin-bottom: 24px;
+        }
+
+        /* Danh sách nút Mạng xã hội Siêu Ngầu */
+        .social-links {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+
+        .btn-social {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 13px 20px;
+            border-radius: 16px;
+            text-decoration: none;
+            color: #fff;
+            font-weight: 700;
+            font-size: 14.5px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            z-index: 1;
+        }
+
+        /* Tia Laser quét ngang khi hover */
+        .btn-social::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -150%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transform: skewX(-20deg);
+            transition: left 0.6s ease;
+        }
+
+        .btn-social:hover::before {
+            left: 150%;
+        }
+
+        .btn-facebook {
+            background: linear-gradient(135deg, #1877f2, #0d52b5);
+            box-shadow: 0 6px 20px rgba(24, 119, 242, 0.35);
+        }
+
+        .btn-tiktok {
+            background: linear-gradient(135deg, #111111, #222222);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        .btn-zalo {
+            background: linear-gradient(135deg, #0068ff, #0040a8);
+            box-shadow: 0 6px 20px rgba(0, 104, 255, 0.35);
+        }
+
+        .btn-social:hover {
+            transform: translateY(-4px) scale(1.02);
+            filter: brightness(1.2);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        .btn-social i {
+            transition: transform 0.3s ease;
+        }
+
+        .btn-social:hover i {
+            transform: scale(1.2) rotate(-5deg);
+        }
+
+        /* Trình phát nhạc Cyberpunk */
+        .music-player {
+            background: rgba(10, 16, 30, 0.85);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 20px;
+            padding: 16px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        .song-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .song-title {
+            font-size: 13px;
+            color: #cbd5e1;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Sóng âm Equalizer 8 cột nhảy cực phiêu */
+        .equalizer {
+            display: flex;
+            align-items: flex-end;
+            gap: 3px;
+            height: 16px;
+        }
+
+        .eq-bar {
+            width: 3px;
+            height: 20%;
+            background: #38bdf8;
+            border-radius: 2px;
+            transition: height 0.2s ease;
+        }
+
+        .equalizer.playing .eq-bar {
+            animation: eqBounce 0.8s infinite ease-in-out alternate;
+        }
+
+        .eq-bar:nth-child(1) { animation-delay: 0.1s; background: #38bdf8; }
+        .eq-bar:nth-child(2) { animation-delay: 0.3s; background: #818cf8; }
+        .eq-bar:nth-child(3) { animation-delay: 0.2s; background: #c084fc; }
+        .eq-bar:nth-child(4) { animation-delay: 0.5s; background: #f43f5e; }
+        .eq-bar:nth-child(5) { animation-delay: 0.4s; background: #38bdf8; }
+        .eq-bar:nth-child(6) { animation-delay: 0.2s; background: #818cf8; }
+
+        @keyframes eqBounce {
+            0% { height: 15%; }
+            100% { height: 100%; }
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .btn-play {
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            color: #050811;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 18px rgba(56, 189, 248, 0.5);
+        }
+
+        .btn-play:hover {
+            transform: scale(1.12);
+            box-shadow: 0 0 25px rgba(56, 189, 248, 0.8);
+        }
+
+        .volume-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .volume-container input[type="range"] {
+            width: 85px;
+            height: 4px;
+            accent-color: #38bdf8;
+            cursor: pointer;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Canvas hạt đom đém & hiệu ứng sao sao -->
+    <canvas id="particles-canvas"></canvas>
+
+    <!-- Quầng sáng hiệu ứng nền -->
+    <div class="bg-glow-1"></div>
+    <div class="bg-glow-2"></div>
+
+    <div class="card" id="tiltCard">
+        <!-- Khung chứa Đĩa Nhạc Xoay, Cần Nhạc & Logo Avatar -->
+        <div class="disc-container">
+            <!-- Cần đọc đĩa than -->
+            <div class="tonearm" id="tonearm">
+                <div class="tonearm-head"></div>
+                <div class="tonearm-arm"></div>
+            </div>
+            
+            <div class="vinyl-disc" id="vinylDisc"></div>
+            <img src="logo.png" alt="Logo Đăng Khôi" class="logo" onerror="this.src='https://via.placeholder.com/110?text=DK'">
+        </div>
+
+        <!-- Tên & Lời chào -->
+        <h1 class="welcome-title">Mạng xã hội của ĐĂNG KHÔI</h1>
+        <p class="bio">Chào mừng bạn ghé thăm góc nhỏ của tui! ✨</p>
+
+        <!-- Nút Mạng Xã Hội -->
+        <div class="social-links">
+            <a href="https://www.facebook.com/share/14oDZAvZiWD/" target="_blank" class="btn-social btn-facebook">
+                <i class="fa-brands fa-facebook fa-lg"></i> Facebook
+            </a>
+
+            <a href="https://www.tiktok.com/@dangkhoi2_11?_r=1&_t=ZS-99p7bsHz5in" target="_blank" class="btn-social btn-tiktok">
+                <i class="fa-brands fa-tiktok fa-lg"></i> TikTok
+            </a>
+
+            <a href="https://zalo.me/0797313096" target="_blank" class="btn-social btn-zalo">
+                <i class="fa-solid fa-comment-dots fa-lg"></i> Zalo
+            </a>
+        </div>
+
+        <!-- Trình Phát Nhạc Cyberpunk -->
+        <div class="music-player">
+            <div class="song-info">
+                <div class="song-title">
+                    <i class="fa-solid fa-compact-disc fa-spin" style="color: #38bdf8;"></i>
+                    <span id="song-name">Nhạc nền trang web</span>
+                </div>
+                <!-- Sóng âm nhạc 6 cột -->
+                <div class="equalizer" id="equalizer">
+                    <div class="eq-bar"></div>
+                    <div class="eq-bar"></div>
+                    <div class="eq-bar"></div>
+                    <div class="eq-bar"></div>
+                    <div class="eq-bar"></div>
+                    <div class="eq-bar"></div>
+                </div>
+            </div>
+
+            <audio id="myAudio" src="nhac.mp3" loop></audio>
+
+            <div class="controls">
+                <button class="btn-play" id="playBtn" onclick="togglePlay()">
+                    <i class="fa-solid fa-play" id="playIcon"></i>
+                </button>
+
+                <div class="volume-container">
+                    <i class="fa-solid fa-volume-high" style="font-size: 12px; color: #94a3b8;"></i>
+                    <input type="range" id="volumeControl" min="0" max="1" step="0.05" value="0.7" oninput="setVolume(this.value)">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const audio = document.getElementById('myAudio');
+        const playIcon = document.getElementById('playIcon');
+        const vinylDisc = document.getElementById('vinylDisc');
+        const tonearm = document.getElementById('tonearm');
+        const equalizer = document.getElementById('equalizer');
+
+        // Âm lượng mặc định 70%
+        audio.volume = 0.7;
+
+        // Bật / Tạm dừng nhạc thủ công & Cập nhật đĩa quay + Cần nhạc
+        function togglePlay() {
+            if (audio.paused) {
+                audio.play().then(() => {
+                    playMusicUI();
+                }).catch(err => console.log(err));
+            } else {
+                pauseMusicUI();
+            }
+        }
+
+        function playMusicUI() {
+            audio.play();
+            playIcon.classList.remove('fa-play');
+            playIcon.classList.add('fa-pause');
+            vinylDisc.classList.add('playing');      // Cho đĩa xoay
+            tonearm.classList.add('playing');        // Hạ cần nhạc xuống đĩa
+            equalizer.classList.add('playing');      // Bật sóng âm
+        }
+
+        function pauseMusicUI() {
+            audio.pause();
+            playIcon.classList.remove('fa-pause');
+            playIcon.classList.add('fa-play');
+            vinylDisc.classList.remove('playing');   // Dừng đĩa xoay
+            tonearm.classList.remove('playing');     // Nhấc cần nhạc lên
+            equalizer.classList.remove('playing');   // Dừng sóng âm
+        }
+
+        // Tự động phát nhạc khi chạm nhẹ lần đầu
+        function handleFirstInteraction() {
+            if (audio.paused) {
+                audio.play().then(() => {
+                    playMusicUI();
+                }).catch(err => console.log("Cần chạm để phát nhạc"));
+            }
+            document.removeEventListener('click', handleFirstInteraction);
+            document.removeEventListener('touchstart', handleFirstInteraction);
+        }
+
+        document.addEventListener('click', handleFirstInteraction);
+        document.addEventListener('touchstart', handleFirstInteraction);
+
+        // Điều chỉnh âm lượng
+        function setVolume(val) {
+            audio.volume = val;
+        }
+
+        // --- HIỆU ỨNG 3D TILT nghiêng Card theo con trỏ chuột ---
+        const card = document.getElementById('tiltCard');
+        document.addEventListener('mousemove', (e) => {
+            const xAxis = (window.innerWidth / 2 - e.pageX) / 25;
+            const yAxis = (window.innerHeight / 2 - e.pageY) / 25;
+            card.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
+        });
+
+        // Reset độ nghiêng khi di chuột ra ngoài
+        document.addEventListener('mouseleave', () => {
+            card.style.transform = `rotateY(0deg) rotateX(0deg)`;
+        });
+
+        // --- HIỆU ỨNG HẠT ĐOM ĐÉM ĐA SẮC NỀN (PARTICLES EFFECT) ---
+        const canvas = document.getElementById('particles-canvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        const colors = ['#38bdf8', '#818cf8', '#c084fc', '#f43f5e'];
+        const particles = Array.from({ length: 60 }, () => ({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: Math.random() * 2.5 + 0.5,
+            speedY: -Math.random() * 0.6 - 0.2,
+            speedX: (Math.random() - 0.5) * 0.3,
+            opacity: Math.random() * 0.7 + 0.2,
+            color: colors[Math.floor(Math.random() * colors.length)]
+        }));
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                p.y += p.speedY;
+                p.x += p.speedX;
+
+                if (p.y < 0) {
+                    p.y = canvas.height;
+                    p.x = Math.random() * canvas.width;
+                }
+
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.opacity;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            requestAnimationFrame(animateParticles);
+        }
+        animateParticles();
+    </script>
+</body>
+</html>
+
